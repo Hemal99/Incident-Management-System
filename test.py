@@ -2,35 +2,44 @@ import re
 from datetime import datetime
 import csv
 
-from elasticData import fetch_messages_from_elasticsearch
+from elastic_utils import fetch_messages_from_elasticsearch
+from geo_utils import get_details
+
 
 def extract_information_from_message(log_message):
-    log_pattern = re.compile(r'(?P<timestamp>\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}) \[error\] \d+#\d+: \*(?P<error_code>\d+) .*?client: (?P<client_ip>[\d\.]+), server: (?P<server_name>\S+), request: "(?P<request_method>\S+) (?P<request_uri>\S+) HTTP/\d\.\d", upstream: "(?P<upstream>.*?)", host: "(?P<host>\S+)"')
+    log_pattern = re.compile(
+        r'(?P<client_ip>[\d\.]+) - - \[(?P<timestamp>.*?)\] "(?P<request_method>\S+) (?P<request_uri>\S+) HTTP/(?P<http_version>[\d.]+)" (?P<response_code>\d+) (?P<bytes_sent>\d+) "(?P<referrer>.*?)" "(?P<user_agent>.*?)"'
+    )
     match = log_pattern.search(log_message)
 
     if match:
-        timestamp_str = match.group('timestamp')
-        timestamp = datetime.strptime(timestamp_str, '%Y/%m/%d %H:%M:%S')
-        error_code = match.group('error_code')
-        client_ip = match.group('client_ip')
-        server_name = match.group('server_name')
-        request_method = match.group('request_method')
-        request_uri = match.group('request_uri')
-        upstream = match.group('upstream')
-        host = match.group('host')
+        timestamp_str = match.group("timestamp")
+        timestamp = datetime.strptime(timestamp_str, "%d/%b/%Y:%H:%M:%S %z")
+        clientip = match.group("client_ip")
+        request_method = match.group("request_method")
+        request_uri = match.group("request_uri")
+        http_version = match.group("http_version")
+        response_code = match.group("response_code")
+        bytes_sent = match.group("bytes_sent")
+        referrer = match.group("referrer")
+        user_agent = match.group("user_agent")
+        country_code = get_details(clientip) if clientip else ""
 
         return {
-            "Timestamp": timestamp,
-            "Error Code": error_code,
-            "Client IP": client_ip,
-            "Server Name": server_name,
-            "Request Method": request_method,
-            "Request URI": request_uri,
-            "Upstream": upstream,
-            "Host": host
+            "timestamp": timestamp,
+            "clientip": clientip,
+            "verb": request_method,
+            "request": request_uri,
+            "httpversion": http_version,
+            "response": response_code,
+            "bytes": bytes_sent,
+            "referrer": referrer,
+            "useragent.device": user_agent,
+            "geoip.country_code3": country_code,
         }
     else:
         return None
+
 
 # Call the function to get messages
 messages = fetch_messages_from_elasticsearch()
@@ -50,7 +59,7 @@ if messages:
     csv_columns = extracted_data[0].keys() if extracted_data else []
     csv_file_path = "extracted_data.csv"
 
-    with open(csv_file_path, 'w', newline='') as csv_file:
+    with open(csv_file_path, "w", newline="") as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=csv_columns)
         writer.writeheader()
         writer.writerows(extracted_data)
