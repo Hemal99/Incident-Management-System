@@ -7,7 +7,7 @@ def fetch_messages_from_elasticsearch():
 
     payload = {
         "track_total_hits": False,
-        "size": 10,
+        "size": 10000,
         "query": {
             "bool": {
                 "must": [],

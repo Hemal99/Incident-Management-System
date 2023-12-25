@@ -23,7 +23,7 @@ def extract_information_from_message(log_message):
         bytes_sent = match.group("bytes_sent")
         referrer = match.group("referrer")
         user_agent = match.group("user_agent")
-        country_code = get_details(clientip) if clientip else ""
+        # country_code = get_details(clientip) if clientip else ""
 
         return {
             "timestamp": timestamp,
@@ -35,7 +35,7 @@ def extract_information_from_message(log_message):
             "bytes": bytes_sent,
             "referrer": referrer,
             "useragent.device": user_agent,
-            "geoip.country_code3": country_code,
+            "geoip.country_code3": "US",
         }
     else:
         return None
