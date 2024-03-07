@@ -1,9 +1,16 @@
 import json
 import requests
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+elk_url = os.getenv("ELK_URL")
 
 
 def fetch_messages_from_elasticsearch():
-    url = "http://3.143.252.149:9200/filebeat-*/_search"
+    url = elk_url
 
     payload = {
         "track_total_hits": False,
