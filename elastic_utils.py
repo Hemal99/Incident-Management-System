@@ -7,14 +7,21 @@ import os
 load_dotenv()
 
 elk_url = os.getenv("ELK_URL")
+elk_size = os.getenv("ELK_SIZE")
+elk_range_gte = os.getenv("ELK_RANGE_GTE")
+elk_range_lte = os.getenv("ELK_RANGE_LTE")
+elk_query = os.getenv("ELK_QUERY")
+elk_must_not = os.getenv("ELK_MUST_NOT")
+elk_log_file_path = os.getenv("ELK_LOG_FILE_PATH")
+elk_track_total_hits = os.getenv("ELK_TRACK_TOTAL_HITS")
 
 
 def fetch_messages_from_elasticsearch():
     url = elk_url
 
     payload = {
-        "track_total_hits": False,
-        "size": 10000,
+        "track_total_hits": elk_track_total_hits,
+        "size": elk_size,
         "query": {
             "bool": {
                 "must": [],
@@ -22,7 +29,7 @@ def fetch_messages_from_elasticsearch():
                     {
                         "multi_match": {
                             "type": "best_fields",
-                            "query": "wp-content",
+                            "query": elk_query,
                             "lenient": True,
                         }
                     },
@@ -30,14 +37,14 @@ def fetch_messages_from_elasticsearch():
                         "range": {
                             "@timestamp": {
                                 "format": "strict_date_optional_time",
-                                "gte": "2023-11-23T18:30:00.000Z",
-                                "lte": "2023-12-24T03:34:24.736Z",
+                                "gte": elk_range_gte,
+                                "lte": elk_range_lte,
                             }
                         }
                     },
                 ],
                 "should": [],
-                "must_not": [{"match_phrase": {"log.file.path": "/var/log/syslog"}}],
+                "must_not": [{"match_phrase": {"log.file.path": elk_log_file_path}}],
             }
         },
     }
