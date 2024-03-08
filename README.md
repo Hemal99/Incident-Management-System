@@ -174,7 +174,7 @@ def main():
 ## Future Works
 
 1. I am attempting to leverage the functionalities available at https://logpai.com/.
-2. I am planning to integrate a data lake for storage purposes.
+2. I am planning to integrate a data lake for storage purposes (ex - Snowflakes).
 3. The repository for future work can be found at https://github.com/Hemal99/Shield-Master.
 
 
