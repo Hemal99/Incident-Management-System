@@ -5,11 +5,20 @@ import csv
 from elastic_utils import fetch_messages_from_elasticsearch
 from geo_utils import get_details
 
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+# Retrieve the log pattern from environment variable
+log_pattern_str = os.getenv("LOG_PATTERN")
+
+# Compile the pattern
+log_pattern = re.compile(log_pattern_str)
+
 
 def extract_information_from_message(log_message):
-    log_pattern = re.compile(
-        r'(?P<client_ip>[\d\.]+) - - \[(?P<timestamp>.*?)\] "(?P<request_method>\S+) (?P<request_uri>\S+) HTTP/(?P<http_version>[\d.]+)" (?P<response_code>\d+) (?P<bytes_sent>\d+) "(?P<referrer>.*?)" "(?P<user_agent>.*?)"'
-    )
+
     match = log_pattern.search(log_message)
 
     if match:
