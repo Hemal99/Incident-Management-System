@@ -9,6 +9,8 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 from ip2geotools.databases.noncommercial import DbIpCity
 import folium
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
 
 
 def read_data(file_path):
@@ -82,6 +84,11 @@ def get_details(ip):
     return res.latitude, res.longitude
 
 
+def get_location_name(ip):
+    res = DbIpCity.get(ip, api_key="free")
+    return res.city
+
+
 def display_map(ip_list, count_list, most_occurred_ip):
     # Create a base map
     m = folium.Map(location=[0, 0], zoom_start=2)
@@ -89,17 +96,21 @@ def display_map(ip_list, count_list, most_occurred_ip):
     # Add markers for each IP address
     for ip, count in zip(ip_list, count_list):
         lat, lon = get_details(ip)
+        # Fetch the name of the location corresponding to the IP address
+        location_name = get_location_name(ip)  # You need to implement this function
         # Check if the current IP address is the most occurred one
         if ip == most_occurred_ip:
-            # Use a different color for the marker
+            # Use a different color for the marker and include location name in tooltip
             folium.Marker(
                 location=[lat, lon],
-                popup=f"IP: {ip}, Count: {count}",
+                popup=f"IP: {ip}, Count: {count}, Location: {location_name}",
                 icon=folium.Icon(color="red"),
             ).add_to(m)
         else:
+            # Include location name in tooltip
             folium.Marker(
-                location=[lat, lon], popup=f"IP: {ip}, Count: {count}"
+                location=[lat, lon],
+                popup=f"IP: {ip}, Count: {count}, Location: {location_name}",
             ).add_to(m)
 
     # Display the map
