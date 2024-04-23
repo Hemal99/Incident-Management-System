@@ -3,3 +3,4 @@ ip2geotools
 requests
 matplotlib
 seaborn
+geopandas

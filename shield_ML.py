@@ -5,6 +5,10 @@ from sklearn.cluster import KMeans
 from sklearn.ensemble import IsolationForest
 import matplotlib.pyplot as plt
 import seaborn as sns
+import geopandas as gpd
+import matplotlib.pyplot as plt
+from ip2geotools.databases.noncommercial import DbIpCity
+import folium
 
 
 def read_data(file_path):
@@ -46,8 +50,65 @@ def visualize_anomalies(df):
     plt.show()
 
 
-def visualize_clusters(df, top_n=5):
-    # Plotting the clusters using a scatter plot
+def visualize_clusters_most_occured(df, top_n=5):
+    # Plotting the clusters using a bar chart
+
+    top_ips = df["ip"].value_counts().nlargest(top_n)
+
+    # Return the most occurred IP address
+    most_occurred_ip = top_ips.idxmax()
+    most_occurred_count = top_ips.max()
+    return most_occurred_ip, most_occurred_count
+
+
+def visualize_clusters_most_occured_map(df, top_n=5):
+    # Get the top 5 most occurred IP addresses
+    top_ips = df["ip"].value_counts().nlargest(top_n)
+
+    # Initialize lists to store IP addresses and their counts
+    most_occurred_ips = []
+    most_occurred_counts = []
+
+    # Iterate over the top IPs and extract IP addresses and counts
+    for ip, count in top_ips.items():
+        most_occurred_ips.append(ip)
+        most_occurred_counts.append(count)
+
+    return most_occurred_ips, most_occurred_counts
+
+
+def get_details(ip):
+    res = DbIpCity.get(ip, api_key="free")
+    return res.latitude, res.longitude
+
+
+def display_map(ip_list, count_list, most_occurred_ip):
+    # Create a base map
+    m = folium.Map(location=[0, 0], zoom_start=2)
+
+    # Add markers for each IP address
+    for ip, count in zip(ip_list, count_list):
+        lat, lon = get_details(ip)
+        # Check if the current IP address is the most occurred one
+        if ip == most_occurred_ip:
+            # Use a different color for the marker
+            folium.Marker(
+                location=[lat, lon],
+                popup=f"IP: {ip}, Count: {count}",
+                icon=folium.Icon(color="red"),
+            ).add_to(m)
+        else:
+            folium.Marker(
+                location=[lat, lon], popup=f"IP: {ip}, Count: {count}"
+            ).add_to(m)
+
+    # Display the map
+    m.save("map.html")  # Save the map as an HTML file
+    return m
+
+
+def visualize_clusters_chart(df, top_n=5):
+    # Plotting the clusters using a bar chart
     plt.figure(figsize=(10, 6))
     top_ips = df["ip"].value_counts().nlargest(top_n)
     top_ips.plot(kind="barh", color=sns.color_palette("Dark2"))
@@ -125,6 +186,41 @@ def perform_kmeans(df_norm, n_clusters=4):
     return kmeans.predict(df_norm)
 
 
+def visualize_geo_locations(df):
+    # Assuming df contains IP addresses and their corresponding countries
+
+    # Load the world map shapefile
+    world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
+
+    # Group the DataFrame by IP addresses and count their occurrences
+    top_ips = df["ip"].value_counts().nlargest(10).index
+
+    # Filter the DataFrame to include only the top 10 IPs
+    df_top10 = df[df["ip"].isin(top_ips)]
+
+    # Merge with the world map data to get geometry information
+    merged = world.merge(
+        df_top10, left_on="iso_a3", right_on="geoip.country_code3", how="left"
+    )
+
+    # Plot the world map
+    ax = merged.plot(
+        column="ip", cmap="Blues", figsize=(15, 10), legend=True, edgecolor="gray"
+    )
+
+    # Highlight the most occurred IP address with a different color
+    most_occurred_ip = df["ip"].value_counts().idxmax()
+    most_occurred_country = df[df["ip"] == most_occurred_ip][
+        "geoip.country_code3"
+    ].iloc[0]
+    merged[merged["geoip.country_code3"] == most_occurred_country].plot(
+        ax=ax, color="red"
+    )
+
+    plt.title("Top 10 IP Addresses Geo-Locations")
+    plt.show()
+
+
 def main():
     # Define the file path
     file_path = "extracted_data.csv"
@@ -162,11 +258,22 @@ def main():
     # visualize_anomalies(result_df)
 
     # Visualize the clustering results
-    visualize_clusters(result_df, top_n=10)
+    # most_occured_ip = visualize_clusters_most_occured(result_df, top_n=10)
+    # print(most_occured_ip)
 
-    # Display the results
-    # print(result_df[result_df["result"] == 1])
-    # print(result_df[result_df["result"] == 0])
+    # visualize_clusters_chart(result_df, top_n=10)
+    # print("Visualizing Geo Locations" + df.columns)
+    most_occurred_ips, most_occurred_counts = visualize_clusters_most_occured_map(
+        result_df, top_n=5
+    )
+
+    # Get the most occurred IP address
+    most_occurred_ip = most_occurred_ips[
+        0
+    ]  # Assuming the most occurred IP is the first in the list
+
+    # Display the map with markers for these IP addresses, highlighting the most occurred one
+    display_map(most_occurred_ips, most_occurred_counts, most_occurred_ip)
 
 
 if __name__ == "__main__":
